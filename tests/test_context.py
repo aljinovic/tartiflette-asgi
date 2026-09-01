@@ -36,7 +36,7 @@ async def test_access_request_from_graphql_context(
     app = Starlette(
         routes=[Mount("/", graphql)],
         middleware=[Middleware(FakeAuthMiddleware)],
-        on_startup=[graphql.startup],
+        lifespan=graphql.lifespan,
     )
 
     async with get_client(app) as client:

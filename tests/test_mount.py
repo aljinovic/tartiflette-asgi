@@ -20,7 +20,7 @@ async def test_starlette_mount(engine: Engine, mount_path: str, path: str) -> No
 
     graphql = TartifletteApp(**kwargs)
     routes = [Mount(mount_path, graphql)]
-    app = Starlette(routes=routes, on_startup=[graphql.startup])
+    app = Starlette(routes=routes, lifespan=graphql.lifespan)
 
     query = "{ hello }"
     full_path = mount_path.rstrip("/") + ("/" if path is None else path)
@@ -41,7 +41,7 @@ async def test_starlette_mount(engine: Engine, mount_path: str, path: str) -> No
 @pytest.mark.asyncio
 async def test_must_register_startup_handler(engine: Engine) -> None:
     graphql = TartifletteApp(engine=engine)
-    app = Starlette(routes=[Mount("/graphql", graphql)], on_startup=[])
+    app = Starlette(routes=[Mount("/graphql", graphql)])
 
     async with get_client(app) as client:
         with pytest.raises(RuntimeError) as ctx:
@@ -50,9 +50,8 @@ async def test_must_register_startup_handler(engine: Engine) -> None:
     error = str(ctx.value).lower()
     assert "hint" in error
     assert "starlette example" in error
-    assert ".add_event_handler" in error
-    assert "'startup'" in error
-    assert ".startup" in error
+    assert "lifespan" in error
+    assert "graphql.lifespan" in error
 
 
 @pytest.mark.asyncio
@@ -61,7 +60,7 @@ async def test_graphiql_endpoint_paths_when_mounted(
     engine: Engine, mount_path: str
 ) -> None:
     graphql = TartifletteApp(engine=engine, graphiql=True, subscriptions=True)
-    app = Starlette(routes=[Mount(mount_path, graphql)], on_startup=[graphql.startup])
+    app = Starlette(routes=[Mount(mount_path, graphql)], lifespan=graphql.lifespan)
 
     async with get_client(app) as client:
         response = await client.get(mount_path, headers={"accept": "text/html"})
@@ -85,7 +84,7 @@ async def test_tartiflette_app_as_sub_starlette_app(engine: Engine) -> None:
         Route("/", endpoint=home),
         Mount("/graphql", app=graphql, name="tartiflette-asgi"),
     ]
-    app = Starlette(routes=routes, on_startup=[graphql.startup])
+    app = Starlette(routes=routes, lifespan=graphql.lifespan)
 
     async with get_client(app) as client:
         response = await client.get("/")

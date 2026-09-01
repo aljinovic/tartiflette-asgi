@@ -1,5 +1,10 @@
 import typing
 
+try:
+    from contextlib import asynccontextmanager
+except ImportError:  # pragma: no cover
+    from async_generator import asynccontextmanager  # type: ignore
+
 from starlette.routing import BaseRoute, Route, Router, WebSocketRoute
 from starlette.types import Receive, Scope, Send
 from tartiflette import Engine
@@ -56,7 +61,7 @@ class TartifletteApp:
         if subscriptions is not None:
             routes.append(WebSocketRoute(subscriptions.path, SubscriptionEndpoint))
 
-        self.router = Router(routes=routes, on_startup=[self.startup])
+        self.router = Router(routes=routes, lifespan=self.lifespan)
 
         config = GraphQLConfig(
             engine=self.engine,
@@ -70,6 +75,11 @@ class TartifletteApp:
 
         self._started_up = False
 
+    @asynccontextmanager
+    async def lifespan(self, app: typing.Any) -> typing.AsyncIterator[None]:
+        await self.startup()
+        yield
+
     async def startup(self) -> None:
         await self.engine.cook()
         self._started_up = True
@@ -81,10 +91,9 @@ class TartifletteApp:
             if not self._started_up:
                 raise RuntimeError(
                     "GraphQL engine is not ready.\n\n"
-                    "HINT: you must register the startup event handler on the "
+                    "HINT: you must register the lifespan handler on the "
                     "parent ASGI application.\n"
                     "Starlette example:\n\n"
-                    "   app.mount('/graphql', graphql)\n"
-                    "   app.add_event_handler('startup', graphql.startup)"
+                    "   app = Starlette(routes=routes, lifespan=graphql.lifespan)"
                 )
             await self.app(scope, receive, send)

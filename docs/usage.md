@@ -124,10 +124,10 @@ In general, you'll need to do the following:
 
 1. Create a `TartifletteApp` application instance.
 1. Mount it under the main ASGI application's router. (Most ASGI frameworks expose a method such as `.mount()` for this purpose.)
-1. Register the startup lifespan event handler on the main ASGI application. (Frameworks typically expose a method such as `.add_event_handler()` for this purpose.)
+1. Register the lifespan handler on the main ASGI application.
 
 !!! important
-    The startup event handler is responsible for preparing the GraphQL engine (a.k.a. [cooking the engine](https://tartiflette.io/docs/api/engine#cook-your-tartiflette)), e.g. loading modules, SDL files, etc.
+    The lifespan handler is responsible for preparing the GraphQL engine (a.k.a. [cooking the engine](https://tartiflette.io/docs/api/engine#cook-your-tartiflette)), e.g. loading modules, SDL files, etc.
 
     If your ASGI framework does not implement the lifespan protocol and/or does not allow to register custom lifespan event handlers, or if you're working at the raw ASGI level, you can still use `tartiflette-asgi` but you'll need to add lifespan support yourself, e.g. using [asgi-lifespan](https://github.com/florimondmanca/asgi-lifespan).
 
@@ -194,7 +194,7 @@ routes = [
     Route("/", endpoint=home),
     Mount("/graphql", graphql),
 ]
-app = Starlette(routes=routes, on_startup=[graphql.startup])
+app = Starlette(routes=routes, lifespan=graphql.lifespan)
 ```
 
 ## Advanced usage
